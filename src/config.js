@@ -3,7 +3,7 @@ export const APP_NAME = 'SMartApp'
 export const APP_TAGLINE = 'Your study companion for every exam'
 export const APP_YEAR = '2027'
 
-// One-time payment (amount in kobo: 250000 = ₦2,500). Must match PRICE_KOBO in the webhook function.
+// Fallback price only (kobo: 250000 = ₦2,500). The real price is set in the admin dashboard > Settings.
 export const FULL_ACCESS = { id: 'full', name: 'Full access', amount: 250000 }
 // Paid and admin-granted access is stored as a far-future date.
 export const isLifetime = (iso) => Boolean(iso) && new Date(iso).getFullYear() >= 2090

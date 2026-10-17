@@ -9,7 +9,8 @@ import { SubjectIcon } from '../lib/subjectIcons'
 import { loadCombo } from '../lib/combo'
 import { buildPaper } from '../lib/questions'
 import { recordInterest } from '../lib/interest'
-import { TRACKS, FULL_ACCESS, FREE_PER_SUBJECT, ENGLISH_DEFAULT, OTHER_DEFAULT, naira } from '../config'
+import { usePrice } from '../lib/price'
+import { TRACKS, FREE_PER_SUBJECT, ENGLISH_DEFAULT, OTHER_DEFAULT, naira } from '../config'
 
 const TONES = ['emerald', 'amber', 'sky', 'violet']
 
@@ -93,6 +94,7 @@ function StudySheet({ subject, filters, onClose }) {
 export default function JambDashboard() {
   const nav = useNavigate()
   const { hasFullAccess, user } = useAuth()
+  const price = usePrice()
   const combo = useMemo(() => loadCombo('jamb'), [])
   const [tab, setTab] = useState('study')
   const [subjects, setSubjects] = useState([])
@@ -166,7 +168,7 @@ export default function JambDashboard() {
 
         {!hasFullAccess && (
           <button className="unlock" onClick={() => nav('/activate')}>
-            <Gem size={20} /> Unlock full access, {naira(FULL_ACCESS.amount)} one-time
+            <Gem size={20} /> Unlock full access, {naira(price)} one-time
           </button>
         )}
       </main>
