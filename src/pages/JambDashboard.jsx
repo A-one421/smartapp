@@ -8,7 +8,8 @@ import { GreenBar } from '../components/Layout'
 import { SubjectIcon } from '../lib/subjectIcons'
 import { loadCombo } from '../lib/combo'
 import { buildPaper } from '../lib/questions'
-import { TRACKS, PLANS, FREE_PER_SUBJECT, ENGLISH_DEFAULT, OTHER_DEFAULT, naira } from '../config'
+import { recordInterest } from '../lib/interest'
+import { TRACKS, FULL_ACCESS, FREE_PER_SUBJECT, ENGLISH_DEFAULT, OTHER_DEFAULT, naira } from '../config'
 
 const TONES = ['emerald', 'amber', 'sky', 'violet']
 
@@ -91,7 +92,7 @@ function StudySheet({ subject, filters, onClose }) {
 
 export default function JambDashboard() {
   const nav = useNavigate()
-  const { hasFullAccess } = useAuth()
+  const { hasFullAccess, user } = useAuth()
   const combo = useMemo(() => loadCombo('jamb'), [])
   const [tab, setTab] = useState('study')
   const [subjects, setSubjects] = useState([])
@@ -100,6 +101,8 @@ export default function JambDashboard() {
 
   // First visit: no saved subjects yet, so go set them up.
   useEffect(() => { if (!combo) nav('/jamb/setup', { replace: true }) }, [combo, nav])
+  // Let the admin see which exam this student is preparing for.
+  useEffect(() => { if (user) recordInterest(user.id, 'jamb') }, [user])
 
   useEffect(() => {
     (async () => {
@@ -116,7 +119,6 @@ export default function JambDashboard() {
   const track = TRACKS.find((t) => t.id === combo.track)
   const english = subjects.find((s) => s.is_compulsory)
   const mine = [english, ...combo.subjects.map((n) => subjects.find((s) => s.name === n))].filter(Boolean)
-  const cheapest = Math.min(...PLANS.map((p) => p.amount))
 
   return (
     <>
@@ -164,7 +166,7 @@ export default function JambDashboard() {
 
         {!hasFullAccess && (
           <button className="unlock" onClick={() => nav('/activate')}>
-            <Gem size={20} /> Unlock full access, from {naira(cheapest)}
+            <Gem size={20} /> Unlock full access, {naira(FULL_ACCESS.amount)} one-time
           </button>
         )}
       </main>

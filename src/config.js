@@ -3,12 +3,10 @@ export const APP_NAME = 'SMartApp'
 export const APP_TAGLINE = 'Your study companion for every exam'
 export const APP_YEAR = '2027'
 
-// Paystack amounts are in kobo (₦1 = 100 kobo). Edit prices/durations here.
-export const PLANS = [
-  { id: 'monthly', name: '1 Month', amount: 150000, days: 30, note: 'Full access to all questions' },
-  { id: 'termly', name: '3 Months', amount: 350000, days: 90, note: 'Best for one exam season' },
-  { id: 'yearly', name: '12 Months', amount: 900000, days: 365, note: 'Best value' }
-]
+// One-time payment (amount in kobo: 250000 = ₦2,500). Must match PRICE_KOBO in the webhook function.
+export const FULL_ACCESS = { id: 'full', name: 'Full access', amount: 250000 }
+// Paid and admin-granted access is stored as a far-future date.
+export const isLifetime = (iso) => Boolean(iso) && new Date(iso).getFullYear() >= 2090
 
 export const CLASS_LEVELS = ['SS1', 'SS2', 'SS3']
 export const EXAM_SECONDS = 2 * 60 * 60 // JAMB: 2 hours for 180 questions

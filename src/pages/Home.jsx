@@ -1,8 +1,10 @@
+import { useState } from 'react'
 import { useNavigate } from 'react-router-dom'
-import { Lock, Crown, ChevronRight, GraduationCap, ScrollText, Building2, Timer, Lightbulb } from 'lucide-react'
+import { Lock, Crown, ChevronRight, GraduationCap, ScrollText, Building2, Timer, Lightbulb, Check } from 'lucide-react'
 import { useAuth } from '../context/AuthContext'
 import InstallBanner from '../components/InstallBanner'
 import HeroArt from '../components/HeroArt'
+import { recordInterest } from '../lib/interest'
 import { EXAMS } from '../config'
 
 const ICONS = { jamb: GraduationCap, waec: ScrollText, postutme: Building2 }
@@ -12,6 +14,14 @@ export default function Home() {
   const nav = useNavigate()
   const { profile, user, hasFullAccess } = useAuth()
   const name = (profile?.name || user?.email?.split('@')[0] || 'Student').split(' ')[0]
+  const [soon, setSoon] = useState(null)   // exam shown in the "coming soon" sheet
+  const [notified, setNotified] = useState(false)
+
+  const notify = async () => {
+    await recordInterest(user.id, soon.id)
+    setNotified(true)
+  }
+  const closeSheet = () => { setSoon(null); setNotified(false) }
 
   return (
     <main className="page has-nav hm">
@@ -44,8 +54,7 @@ export default function Home() {
             <button
               key={ex.id}
               className={`ex-card ${TONES[ex.id]} ${ex.available ? '' : 'off'}`}
-              disabled={!ex.available}
-              onClick={() => nav(`/${ex.id}`)}
+              onClick={() => (ex.available ? nav(`/${ex.id}`) : setSoon(ex))}
             >
               <span className="hm-ic"><Icon size={26} /></span>
               <span className="ex-text">
@@ -63,6 +72,19 @@ export default function Home() {
         <div><Timer size={22} /><b>Exam mode</b><span>Timed like the real CBT. Results at the end.</span></div>
         <div><Lightbulb size={22} /><b>Study mode</b><span>No timer. See the answer after every question.</span></div>
       </div>
+
+      {soon && (
+        <div className="sheet-bg" onClick={closeSheet}>
+          <div className="sheet" onClick={(e) => e.stopPropagation()}>
+            <h3 style={{ margin: '0 0 6px', fontSize: 20 }}>{soon.name} is coming soon</h3>
+            <p className="sub" style={{ margin: '0 0 16px' }}>We are preparing the questions. Tap below and we will know you want it.</p>
+            {notified
+              ? <div className="ok" style={{ display: 'flex', gap: 8, alignItems: 'center' }}><Check size={18} /> Done. We will let you know when it opens.</div>
+              : <button className="btn" onClick={notify}>Notify me</button>}
+            <button className="link" style={{ width: '100%', marginTop: 8 }} onClick={closeSheet}>Close</button>
+          </div>
+        </div>
+      )}
     </main>
   )
 }

@@ -13,6 +13,7 @@ import PrepareExam from './pages/PrepareExam'
 import Exam from './pages/Exam'
 import Results from './pages/Results'
 import Activate from './pages/Activate'
+import ResetPassword from './pages/ResetPassword'
 import JambDashboard from './pages/JambDashboard'
 import JambSetup from './pages/JambSetup'
 import ExamSetup from './pages/ExamSetup'
@@ -20,13 +21,14 @@ import ExamSetup from './pages/ExamSetup'
 const NAV_ROUTES = ['/', '/jamb', '/forum', '/profile']
 
 export default function App() {
-  const { session, loading } = useAuth()
+  const { session, loading, recovery } = useAuth()
   const [splash, setSplash] = useState(true)
   const { pathname } = useLocation()
 
   useEffect(() => { const t = setTimeout(() => setSplash(false), 1800); return () => clearTimeout(t) }, [])
 
   if (splash || loading) return <Preloader />
+  if (recovery) return <div className="shell"><ResetPassword /></div>
 
   return (
     <div className="shell">

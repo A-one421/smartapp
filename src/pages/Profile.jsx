@@ -2,13 +2,14 @@ import { useNavigate } from 'react-router-dom'
 import { LogOut, Download, Crown, Mail } from 'lucide-react'
 import { useAuth } from '../context/AuthContext'
 import { useInstallPrompt } from '../hooks/useInstallPrompt'
+import { isLifetime } from '../config'
 
 export default function Profile() {
   const nav = useNavigate()
   const { user, profile, hasFullAccess, signOut } = useAuth()
   const { canInstall, installed, install } = useInstallPrompt()
   const name = profile?.name || user?.email?.split('@')[0] || 'Student'
-  const expires = profile?.access_expires_at ? new Date(profile.access_expires_at).toLocaleDateString('en-NG', { dateStyle: 'long' }) : null
+  const lifetime = profile?.role === 'admin' || isLifetime(profile?.access_expires_at)
 
   return (
     <main className="page has-nav">
@@ -20,12 +21,14 @@ export default function Profile() {
 
       <div className="card">
         <div className="card-title" style={{ fontSize: 18 }}><Crown color="var(--plum)" size={22} /> Plan
-          <span className={`badge ${hasFullAccess ? 'paid' : 'free'}`}>{hasFullAccess ? 'Full access' : 'Free'}</span>
+          <span className={`badge ${hasFullAccess ? 'paid' : 'free'}`}>{hasFullAccess ? 'Full access' : 'Free trial'}</span>
         </div>
         <p style={{ margin: '8px 0 14px', color: 'var(--ink-2)' }}>
-          {hasFullAccess ? (expires ? `Active until ${expires}.` : 'Active.') : 'Unlock every question, year and topic.'}
+          {hasFullAccess
+            ? (lifetime ? 'Lifetime access. Log in on any phone and it is still yours.' : 'Active.')
+            : 'Unlock every question, year and topic with one payment.'}
         </p>
-        <button className="btn" onClick={() => nav('/activate')}>{hasFullAccess ? 'Extend access' : 'Activate full access'}</button>
+        {!hasFullAccess && <button className="btn" onClick={() => nav('/activate')}>Unlock full access</button>}
       </div>
 
       {canInstall && !installed && (
