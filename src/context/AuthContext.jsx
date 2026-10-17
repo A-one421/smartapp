@@ -39,13 +39,13 @@ export function AuthProvider({ children }) {
 
   const value = {
     session, user: session?.user ?? null, profile, loading, hasFullAccess, recovery,
-    finishRecovery: () => { clearRecovery(); setRecovery(false); window.history.replaceState(null, '', window.location.pathname) },
+    finishRecovery: () => { clearRecovery(); setRecovery(false) },
     refreshProfile: () => loadProfile(session?.user?.id),
     signUp: (name, email, password) =>
       supabase.auth.signUp({ email, password, options: { data: { name } } }),
     signIn: (email, password) => supabase.auth.signInWithPassword({ email, password }),
     google: () => supabase.auth.signInWithOAuth({ provider: 'google', options: { redirectTo: window.location.origin } }),
-    resetPassword: (email) => supabase.auth.resetPasswordForEmail(email, { redirectTo: window.location.origin }),
+    resetPassword: (email) => supabase.auth.resetPasswordForEmail(email, { redirectTo: `${window.location.origin}/reset-password` }),
     signOut: () => supabase.auth.signOut()
   }
   return <AuthCtx.Provider value={value}>{children}</AuthCtx.Provider>

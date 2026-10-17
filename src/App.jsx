@@ -28,7 +28,8 @@ export default function App() {
   useEffect(() => { const t = setTimeout(() => setSplash(false), 1800); return () => clearTimeout(t) }, [])
 
   if (splash || loading) return <Preloader />
-  if (recovery) return <div className="shell"><ResetPassword /></div>
+  // The reset email opens /reset-password. Using a real path (not just the link's hash) means it still works after the page reloads.
+  if (recovery || pathname === '/reset-password') return <div className="shell"><ResetPassword /></div>
 
   return (
     <div className="shell">
