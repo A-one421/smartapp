@@ -1,11 +1,12 @@
-import { useEffect, useMemo, useState } from 'react'
+import { useEffect, useMemo, useRef, useState } from 'react'
 import { useNavigate, useSearchParams } from 'react-router-dom'
 import { CalendarDays, FileQuestion, Check, CheckCircle2, ArrowRight } from 'lucide-react'
 import { supabase } from '../lib/supabase'
 import { useExam } from '../context/ExamContext'
 import { GreenBar } from '../components/Layout'
 import { SubjectIcon } from '../lib/subjectIcons'
-import { COUNT_OPTIONS, ENGLISH_DEFAULT, OTHER_DEFAULT } from '../config'
+import { loadCombo } from '../lib/combo'
+import { COMBO_SIZE, COUNT_OPTIONS, ENGLISH_DEFAULT, OTHER_DEFAULT } from '../config'
 
 const KIND = { year: 'session', class: 'class', topic: 'topic' }
 const LABEL = { year: 'Select Session', class: 'Select Class', topic: 'Select Topic' }
@@ -16,13 +17,20 @@ export default function SelectSubjects() {
   const type = ['topic', 'year', 'class'].includes(params.get('type')) ? params.get('type') : 'year'
   const { setSetup } = useExam()
   const isTopic = type === 'topic'
-  const max = isTopic ? 1 : 4
+  const max = isTopic ? 1 : COMBO_SIZE + 1
 
+  const combo = useMemo(() => loadCombo('jamb'), [])
   const [subjects, setSubjects] = useState([])
   const [filters, setFilters] = useState([]) // rows: { subject_id, kind, value, total }
   const [sel, setSel] = useState({})         // { [subjectId]: { filter, count } }
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState('')
+  const seeded = useRef(false)
+
+  // No saved combination yet? Send the student to the dashboard to pick one.
+  useEffect(() => {
+    if (combo.length < COMBO_SIZE) nav('/jamb', { replace: true })
+  }, [combo, nav])
 
   useEffect(() => {
     (async () => {
@@ -41,14 +49,20 @@ export default function SelectSubjects() {
     filters.filter((r) => r.subject_id === id && r.kind === KIND[type]).map((r) => r.value)
       .sort((a, b) => String(b).localeCompare(String(a), undefined, { numeric: true }))
 
-  const english = subjects.find((s) => s.is_compulsory)
+  // Only English + the student's 3 chosen subjects are offered here.
+  const allowed = useMemo(() => subjects.filter((s) => s.is_compulsory || combo.includes(s.name)), [subjects, combo])
+  const english = allowed.find((s) => s.is_compulsory)
   const defaults = (s) => ({ filter: optionsFor(s.id)[0], count: isTopic ? 20 : s.is_compulsory ? ENGLISH_DEFAULT : OTHER_DEFAULT })
 
-  // English is always selected (and locked) outside topic mode.
+  // Pre-select the whole combination (except in topic mode, which uses one subject).
   useEffect(() => {
-    if (isTopic || !english || sel[english.id] || loading) return
-    setSel((p) => ({ ...p, [english.id]: defaults(english) }))
-  }, [english, loading, filters, isTopic]) // eslint-disable-line
+    if (loading || seeded.current || !allowed.length) return
+    seeded.current = true
+    if (isTopic) return
+    const start = {}
+    allowed.forEach((s) => { if (optionsFor(s.id).length) start[s.id] = defaults(s) })
+    setSel(start)
+  }, [loading, allowed]) // eslint-disable-line
 
   const toggle = (s) => {
     if (!isTopic && s.is_compulsory) return
@@ -61,8 +75,8 @@ export default function SelectSubjects() {
   }
   const patch = (id, v) => setSel((p) => ({ ...p, [id]: { ...p[id], ...v } }))
 
-  const chosen = useMemo(() => subjects.filter((s) => sel[s.id]), [subjects, sel])
-  const valid = chosen.length >= 1 && chosen.length <= max && chosen.every((s) => sel[s.id].filter)
+  const chosen = useMemo(() => allowed.filter((s) => sel[s.id]), [allowed, sel])
+  const valid = chosen.length >= 1 && chosen.length <= max && chosen.every((s) => sel[s.id].filter) && (isTopic || Boolean(english && sel[english.id]))
 
   const cont = () => {
     setSetup({
@@ -104,12 +118,16 @@ export default function SelectSubjects() {
 
   return (
     <>
-      <GreenBar title="Select Subject Sessions" subtitle={isTopic ? 'Choose 1 subject and a topic' : 'Select between 1 - 4 subjects'} />
+      <GreenBar title="Select Subject Sessions" subtitle={isTopic ? 'Choose 1 subject and a topic' : 'Your subjects for this practice'} />
       <main className="page has-sticky">
         {loading && <div className="empty">Loading subjects…</div>}
         {error && <div className="err">{error}</div>}
 
-        {!isTopic && english && sel[english.id] && (
+        <div className="notice" style={{ background: 'var(--mint)', borderColor: '#b9dfc2', color: 'var(--green-deep)' }}>
+          Your subjects: English, {combo.join(', ')}. <button className="link" style={{ padding: 0 }} onClick={() => nav('/jamb')}>Change</button>
+        </div>
+
+        {!isTopic && english && (
           <>
             <div className="subject-row" style={{ marginBottom: 8 }}>
               <span className="ic"><SubjectIcon name={english.icon} size={26} /></span>
@@ -120,7 +138,7 @@ export default function SelectSubjects() {
           </>
         )}
 
-        {subjects.filter((s) => isTopic || !s.is_compulsory).map((s) => {
+        {allowed.filter((s) => isTopic || !s.is_compulsory).map((s) => {
           const on = Boolean(sel[s.id])
           const empty = optionsFor(s.id).length === 0
           return (

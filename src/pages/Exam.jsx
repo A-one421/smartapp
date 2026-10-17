@@ -24,7 +24,7 @@ export default function Exam() {
   const submitted = useRef(false)
   const study = mode === 'study'
 
-  useEffect(() => { if (!paper.length) nav('/practice', { replace: true }) }, [paper, nav])
+  useEffect(() => { if (!paper.length) nav('/jamb', { replace: true }) }, [paper, nav])
 
   const submit = useCallback(async () => {
     if (submitted.current) return

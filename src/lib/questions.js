@@ -1,4 +1,5 @@
 import { supabase } from './supabase'
+import { EXAM_SECONDS, SECONDS_PER_QUESTION } from '../config'
 
 export function shuffle(arr) {
   const a = [...arr]
@@ -13,7 +14,7 @@ export function shuffle(arr) {
 // RLS decides what the user may see: free users only get is_free rows.
 export async function fetchSubjectQuestions(type, subject) {
   let q = supabase.from('questions').select('*').eq('subject_id', subject.id)
-  if (type === 'year') q = q.eq('session', subject.filter)
+  if ((type === 'year' || type === 'exam') && subject.filter) q = q.eq('session', subject.filter)
   if (type === 'class') q = q.eq('class_level', subject.filter)
   if (type === 'topic') q = q.eq('topic', subject.filter)
   const { data, error } = await q.limit(800)
@@ -37,3 +38,15 @@ export function gradePaper(paper, answers) {
     : null
   return { subjects, total, correct, jamb }
 }
+
+// Loads every subject in a setup. Subjects with no matching questions are skipped.
+export async function buildPaper(setup) {
+  const paper = []
+  for (const subject of setup.subjects) {
+    const questions = await fetchSubjectQuestions(setup.type, subject)
+    if (questions.length) paper.push({ subject, questions })
+  }
+  return paper
+}
+
+export const examSeconds = (count) => Math.min(EXAM_SECONDS, count * SECONDS_PER_QUESTION)

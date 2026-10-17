@@ -13,8 +13,11 @@ import PrepareExam from './pages/PrepareExam'
 import Exam from './pages/Exam'
 import Results from './pages/Results'
 import Activate from './pages/Activate'
+import JambDashboard from './pages/JambDashboard'
+import JambSetup from './pages/JambSetup'
+import ExamSetup from './pages/ExamSetup'
 
-const NAV_ROUTES = ['/', '/forum', '/profile']
+const NAV_ROUTES = ['/', '/jamb', '/forum', '/profile']
 
 export default function App() {
   const { session, loading } = useAuth()
@@ -31,6 +34,9 @@ export default function App() {
         <>
           <Routes>
             <Route path="/" element={<Home />} />
+            <Route path="/jamb" element={<JambDashboard />} />
+            <Route path="/jamb/setup" element={<JambSetup />} />
+            <Route path="/exam-setup" element={<ExamSetup />} />
             <Route path="/forum" element={<Forum />} />
             <Route path="/profile" element={<Profile />} />
             <Route path="/practice" element={<PracticeType />} />

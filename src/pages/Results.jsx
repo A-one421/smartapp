@@ -2,12 +2,14 @@ import { useEffect, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { Home, RotateCcw } from 'lucide-react'
 import { useExam } from '../context/ExamContext'
+import { useAuth } from '../context/AuthContext'
 import { GreenBar } from '../components/Layout'
 import { LETTERS, optionText } from '../lib/questions'
 
 export default function Results() {
   const nav = useNavigate()
   const { result } = useExam()
+  const { hasFullAccess } = useAuth()
   const [open, setOpen] = useState(null)
   useEffect(() => { if (!result) nav('/', { replace: true }) }, [result, nav])
   if (!result) return null
@@ -24,6 +26,13 @@ export default function Results() {
           <div className="big" style={{ fontSize: 24 }}>{result.correct} of {result.total} correct</div>
           {result.jamb !== null && <p className="sub" style={{ margin: 0 }}>Estimated JAMB score: <b>{result.jamb}/400</b></p>}
         </section>
+
+        {!hasFullAccess && (
+          <div className="notice">
+            You are on the free trial (10 questions per subject).{' '}
+            <button className="link" style={{ padding: 0 }} onClick={() => nav('/activate')}>Unlock full access</button> to practise with every question.
+          </div>
+        )}
 
         <section className="card">
           <div className="card-title" style={{ fontSize: 19 }}>Score by subject</div>
@@ -64,7 +73,7 @@ export default function Results() {
           })}
         </section>
 
-        <button className="btn" onClick={() => nav('/practice')}><RotateCcw size={18} /> Practise again</button>
+        <button className="btn" onClick={() => nav('/jamb')}><RotateCcw size={18} /> Practise again</button>
         <button className="btn ghost" style={{ marginTop: 10 }} onClick={() => nav('/')}><Home size={18} /> Back to home</button>
       </main>
     </>

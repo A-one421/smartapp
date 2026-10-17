@@ -1,46 +1,68 @@
 import { useNavigate } from 'react-router-dom'
-import { Menu, Lock, Bell, CalendarDays, CalendarCheck, PlayCircle, Crown } from 'lucide-react'
+import { Lock, Crown, ChevronRight, GraduationCap, ScrollText, Building2, Timer, Lightbulb } from 'lucide-react'
 import { useAuth } from '../context/AuthContext'
 import InstallBanner from '../components/InstallBanner'
+import HeroArt from '../components/HeroArt'
+import { EXAMS } from '../config'
+
+const ICONS = { jamb: GraduationCap, waec: ScrollText, postutme: Building2 }
+const TONES = { jamb: 'emerald', waec: 'amber', postutme: 'sky' }
 
 export default function Home() {
   const nav = useNavigate()
-  const { hasFullAccess } = useAuth()
+  const { profile, user, hasFullAccess } = useAuth()
+  const name = (profile?.name || user?.email?.split('@')[0] || 'Student').split(' ')[0]
+
   return (
-    <>
-      <header className="topbar-home">
-        <button className="icon-btn" style={{ color: 'var(--green)' }} onClick={() => nav('/profile')} aria-label="Menu"><Menu size={30} /></button>
-        <div className="title">JAMB/UTME</div>
+    <main className="page has-nav hm">
+      <header className="hm-head">
+        <div className="hm-avatar" aria-hidden="true">{name[0]?.toUpperCase()}</div>
+        <div className="hm-hello">
+          <span>Welcome back,</span>
+          <b>{name}</b>
+        </div>
         {hasFullAccess
-          ? <span className="pill-activate" style={{ background: 'var(--green)' }}><Crown size={18} /> Full access</span>
-          : <button className="pill-activate" onClick={() => nav('/activate')}><Lock size={18} /> Activate</button>}
-        <button className="bubble bell" aria-label="Notifications"><Bell size={22} /></button>
+          ? <span className="hm-pro"><Crown size={16} /> Full access</span>
+          : <button className="hm-unlock" onClick={() => nav('/activate')}><Lock size={16} /> Unlock all</button>}
       </header>
-      <main className="page has-nav">
-        <InstallBanner />
-        <section className="hero">
-          <span className="chip">Ready when you are</span>
-          <h2>Learn with clarity. Practise with confidence.</h2>
-          <p>Everything you need to prepare, improve, and feel ready for exam day.</p>
-          <img src="/hero.jpg" alt="Two students reading together" />
-        </section>
 
-        <section className="card" style={{ marginTop: 18 }}>
-          <div className="feature">
-            <div className="row"><div className="tile green"><PlayCircle size={28} /></div><h3>Practice JAMB questions</h3></div>
-            <p style={{ margin: '0 0 14px' }}>Pick your subjects, then take a timed CBT exam or study with explanations.</p>
-            <button className="btn" onClick={() => nav('/practice')}>Start practice</button>
-          </div>
-        </section>
+      <InstallBanner />
 
-        <section className="card">
-          <div className="feature">
-            <div className="row"><div className="tile green"><CalendarDays size={28} /></div><h3>Personalized Daily Study Plan</h3></div>
-            <p style={{ margin: '0 0 14px' }}>Set your exam target, study days, weak subjects, and practice style.</p>
-            <button className="btn" onClick={() => alert('Daily study plans are coming soon.')}><CalendarCheck size={20} /> Create Plan</button>
-          </div>
-        </section>
-      </main>
-    </>
+      <section className="hm-hero compact">
+        <div>
+          <span className="hm-eyebrow">EXAM PRACTICE</span>
+          <h2>Pick your exam. Start practising.</h2>
+        </div>
+        <HeroArt compact />
+      </section>
+
+      <h3 className="hm-title">Choose your exam</h3>
+      <div className="ex-list">
+        {EXAMS.map((ex) => {
+          const Icon = ICONS[ex.id] || GraduationCap
+          return (
+            <button
+              key={ex.id}
+              className={`ex-card ${TONES[ex.id]} ${ex.available ? '' : 'off'}`}
+              disabled={!ex.available}
+              onClick={() => nav(`/${ex.id}`)}
+            >
+              <span className="hm-ic"><Icon size={26} /></span>
+              <span className="ex-text">
+                <b>{ex.name}</b>
+                <span>{ex.desc}</span>
+              </span>
+              {ex.available ? <ChevronRight size={22} /> : <em className="soon">Coming soon</em>}
+            </button>
+          )
+        })}
+      </div>
+
+      <h3 className="hm-title">Two ways to learn</h3>
+      <div className="hm-modes">
+        <div><Timer size={22} /><b>Exam mode</b><span>Timed like the real CBT. Results at the end.</span></div>
+        <div><Lightbulb size={22} /><b>Study mode</b><span>No timer. See the answer after every question.</span></div>
+      </div>
+    </main>
   )
 }
