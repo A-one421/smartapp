@@ -4,6 +4,7 @@ import { Lock, Crown, ChevronRight, GraduationCap, ScrollText, Building2, Timer,
 import { useAuth } from '../context/AuthContext'
 import InstallBanner from '../components/InstallBanner'
 import HeroArt from '../components/HeroArt'
+import SupportCard from '../components/SupportCard'
 import { recordInterest } from '../lib/interest'
 import { EXAMS } from '../config'
 
@@ -72,6 +73,8 @@ export default function Home() {
         <div><Timer size={22} /><b>Exam mode</b><span>Timed like the real CBT. Results at the end.</span></div>
         <div><Lightbulb size={22} /><b>Study mode</b><span>No timer. See the answer after every question.</span></div>
       </div>
+
+      <SupportCard />
 
       {soon && (
         <div className="sheet-bg" onClick={closeSheet}>
