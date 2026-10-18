@@ -2,8 +2,9 @@ import { useEffect, useRef, useState } from 'react'
 import { ShieldCheck, Check } from 'lucide-react'
 import { GreenBar } from '../components/Layout'
 import { useAuth } from '../context/AuthContext'
-import { FULL_ACCESS, naira } from '../config'
-import { usePrice, fetchPrice } from '../lib/price'
+import { supabase } from '../lib/supabase'
+import { FULL_ACCESS, APP_NAME, naira } from '../config'
+import { usePrice, fetchPayConfig } from '../lib/price'
 
 function loadPaystack() {
   return new Promise((resolve, reject) => {
@@ -22,6 +23,7 @@ const PERKS = [
   'Study by any year or topic, no limit',
   'Pay once. Log in on any phone and it is still yours.'
 ]
+const REF_KEY = 'smartapp-last-ref'
 
 export default function Activate() {
   const { user, hasFullAccess, refreshProfile } = useAuth()
@@ -29,6 +31,8 @@ export default function Activate() {
   const [msg, setMsg] = useState('')
   const [err, setErr] = useState('')
   const [waiting, setWaiting] = useState(false)
+  const [checking, setChecking] = useState(false)
+  const [lastRef, setLastRef] = useState(() => { try { return localStorage.getItem(REF_KEY) } catch { return null } })
   const poll = useRef(null)
   useEffect(() => () => clearInterval(poll.current), [])
 
@@ -36,34 +40,62 @@ export default function Activate() {
     if (hasFullAccess && waiting) { clearInterval(poll.current); setWaiting(false); setMsg('Payment confirmed. You now have full access.') }
   }, [hasFullAccess, waiting])
 
+  // Ask our server to confirm the payment with Paystack and unlock the account.
+  // This does not depend on the webhook, so it works even if the webhook is late or misconfigured.
+  const confirmPayment = async (reference) => {
+    try { localStorage.setItem(REF_KEY, reference); setLastRef(reference) } catch { /* ignore */ }
+    const { data, error } = await supabase.functions.invoke('paystack-webhook', { body: { reference } })
+    await refreshProfile()
+    return { ok: Boolean(data?.ok), message: data?.message || error?.message || 'Could not confirm the payment yet.' }
+  }
+
   const pay = async () => {
     setErr(''); setMsg('')
     const key = import.meta.env.VITE_PAYSTACK_PUBLIC_KEY
     if (!key) return setErr('Paystack key is missing. Add VITE_PAYSTACK_PUBLIC_KEY to your .env file.')
     try {
       await loadPaystack()
-      const amount = await fetchPrice() // always the latest price set in the admin
+      // Always the latest price and payout account set in the admin dashboard.
+      const { price: amount, subaccount } = await fetchPayConfig()
       const handler = window.PaystackPop.setup({
         key,
         email: user.email,
         amount,
         currency: 'NGN',
+        // When the admin has set a Paystack subaccount, the money settles to the owner's bank account.
+        // The owner bears Paystack's fee, so your own account is never charged.
+        ...(subaccount ? { subaccount, bearer: 'subaccount' } : {}),
         ref: `smart_${user.id.slice(0, 8)}_${Date.now()}`,
-        // The webhook reads this to know who paid. Access is granted only by the server.
-        metadata: { user_id: user.id, plan: FULL_ACCESS.id },
-        callback: () => {
+        metadata: {
+          user_id: user.id, // the server reads this to know who paid
+          plan: FULL_ACCESS.id,
+          // These show on the Paystack dashboard, so you can tell this app's payments from your other app's.
+          custom_fields: [
+            { display_name: 'App', variable_name: 'app', value: APP_NAME },
+            { display_name: 'Product', variable_name: 'product', value: 'Full access (JAMB CBT)' }
+          ]
+        },
+        callback: (response) => {
           setWaiting(true); setMsg('Payment received. Confirming…')
+          confirmPayment(response.reference) // unlock right away, then keep checking below
           let tries = 0
           poll.current = setInterval(async () => {
             tries++
             await refreshProfile()
-            if (tries > 20) { clearInterval(poll.current); setWaiting(false); setMsg('Still confirming. Your access will appear shortly. Reopen the app in a minute.') }
+            if (tries > 20) { clearInterval(poll.current); setWaiting(false); setMsg('Still confirming. Tap "Check my payment" below in a minute.') }
           }, 3000)
         },
         onClose: () => {}
       })
       handler.openIframe()
     } catch (e) { setErr(e.message) }
+  }
+
+  const recheck = async () => {
+    setErr(''); setMsg(''); setChecking(true)
+    const r = await confirmPayment(lastRef)
+    setChecking(false)
+    r.ok ? setMsg(r.message) : setErr(r.message)
   }
 
   return (
@@ -95,6 +127,11 @@ export default function Activate() {
             </section>
             <button className="btn" onClick={pay} disabled={waiting} style={{ marginTop: 16 }}><ShieldCheck size={20} /> {waiting ? 'Confirming…' : `Pay ${naira(price)} with Paystack`}</button>
             <p className="center" style={{ color: 'var(--ink-2)', fontSize: 13 }}>Secure payment by Paystack. Card, bank transfer and USSD.</p>
+            {lastRef && (
+              <div className="center" style={{ marginTop: 6 }}>
+                <button className="link" onClick={recheck} disabled={checking}>{checking ? 'Checking…' : 'Paid already but not unlocked? Check my payment'}</button>
+              </div>
+            )}
           </>
         )}
       </main>
